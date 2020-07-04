@@ -12,6 +12,7 @@ import {
   Button,
   Icon,
   Loader,
+  loadCSSFromString,
 } from '@airtable/blocks/ui';
 
 import React, { useState, useEffect } from 'react';
@@ -36,18 +37,25 @@ async function checkForDefaultProxyUrls(globalConfig: GlobalConfig) {
 export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
   const globalConfig = useGlobalConfig();
 
-  const svcPrivateKeyStye: CSS.Properties = {
-    paddingLeft: '10px',
-    paddingRight: '10px',
-    borderRadius: '3px',
-    boxSizing: 'border-box',
-    fontFamily: "-apple-system,system-ui,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol'",
-    backgroundColor: 'hsl(0, 0%, 95%)',
-    color: 'hsl(0, 0%, 20%)',
-    fontWeight: 400,
-    border: 'none',
-    outline: 'none',
-  }
+  loadCSSFromString(`
+    .blur-on-lose-focus:not(:focus) {
+      color: transparent;
+      text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    .svcPrivateKey {
+      padding-left: 10px;
+      padding-right: 10px;
+      border-radius: 3px;
+      box-sizing: border-box;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      background-color: rgb(242, 242, 242);
+      color: rgb(51, 51, 51);
+      font-weight: 400;
+      border: none;
+      outline: none;
+    }
+  `)
 
   useEffect(() => {
     // Set the default AUTOML_PROXY and GS_PROXY if not set already
@@ -65,8 +73,6 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
 
     const email = globalConfig.get(GCLOUD_SVC_EMAIL) as string;
     const key = globalConfig.get(GCLOUD_SVC_PRIVATE_KEY) as string;
-    console.log("Email: " + email);
-    console.log("Key: " + key);
     const gtoken = new GoogleToken({
       email: email,
       key: key,
@@ -77,6 +83,7 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
       const _ = await gtoken.getToken();
       // validation success
       setLoading(false);
+      setAppState({ index: 1 });
       setIsSettingsVisible(false);
     } catch (e) {
       setLoading(false);
@@ -103,7 +110,7 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
         <form onSubmit={validateSettings}>
           <Box>
             <FormField label="Service Account Email">
-              <InputSynced required={true} globalConfigKey={GCLOUD_SVC_EMAIL} />
+              <InputSynced className='blur-on-lose-focus' required={true} globalConfigKey={GCLOUD_SVC_EMAIL} />
             </FormField>
           </Box>
 
@@ -114,7 +121,8 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
                 id='svcPrivateKey'
                 value={svcPrivateKey as string || ""}
                 rows={15}
-                style={svcPrivateKeyStye}
+                // style={svcPrivateKeyStye}
+                className='svcPrivateKey blur-on-lose-focus'
                 onChange={(e) => {
                   setSvcPrivateKey(e.target.value);
                 }}></textarea>
