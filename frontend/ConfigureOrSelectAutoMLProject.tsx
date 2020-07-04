@@ -11,13 +11,15 @@ import {
   useGlobalConfig,
   TextButton,
   Select,
+  Icon,
 } from '@airtable/blocks/ui';
 import React, { useState, useEffect } from 'react';
 import CSS from 'csstype';
 import _ from 'lodash';
 import { CloudResourceManagerClient } from './gcloud-apis/crm';
+import { ErrorResponse } from './gcloud-apis/base';
 import { useSettings } from './settings';
-import { updateState, isNotEmpty } from './utils';
+import { updateState } from './utils';
 import { SelectOption, SelectOptionValue } from '@airtable/blocks/dist/types/src/ui/select_and_select_buttons_helpers';
 import { AutoMLClient } from './gcloud-apis/aml';
 
@@ -31,6 +33,12 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
 
   const [availableDatasets, setAvailableDatasets] = useState<Array<SelectOption>>([{ value: PLACEHOLDER, label: "Loading..." }]);
   const [selectedDataset, setSelectedDataset] = useState<SelectOptionValue>(undefined);
+
+  const [showCreateDatasetDialog, setShowCreateDatasetDialog] = useState(false);
+  const [newDatasetName, setNewDatasetName] = useState('');
+  const [newDatasetClassificationType, setNewDatasetClassificationType] = useState('MULTICLASS');
+  const [createDatasetIsLoading, setCreateDatasetIsLoading] = useState(false);
+  const [dialogErrorMessage, setDialogErrorMessage] = useState('');
 
   const crmClient = new CloudResourceManagerClient(settings, settings.settings.crmEndpoint);
   const loadProjects = async () => {
@@ -50,9 +58,25 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
     return _.map(datasets.datasets, function (dataset) {
       return {
         value: dataset.name,
-        label: dataset.displayName + " (" + dataset.exampleCount + " examples)",
+        label: dataset.displayName + " (" + (dataset.exampleCount || 0) + " examples)",
       }
     });
+  }
+  const createDataset = async () => {
+    setCreateDatasetIsLoading(true);
+    try {
+      const response = await amlClient.createDataset(selectedProject, newDatasetName, newDatasetClassificationType);
+      console.log("In #createDataset");
+      console.log(response);
+      setCreateDatasetIsLoading(false);
+      setShowCreateDatasetDialog(false);
+      setNewDatasetName('');
+      const updatedAppState = updateState(appState, "state.cache.datasets", []);
+      setAppState(updatedAppState);
+    } catch (errorResponse) {
+      setCreateDatasetIsLoading(false);
+      setDialogErrorMessage(errorResponse.error.message);
+    }
   }
 
   useEffect(() => {
@@ -62,7 +86,9 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
         updateState(appState, "state.cache.projects", response);
       });
     }
-    if (selectedProject && selectedProject !== PLACEHOLDER && !_.has(appState, "state.cache.datasets")) {
+
+    const cachedDatasets = _.get(appState, "state.cache.datasets", []);
+    if (selectedProject && selectedProject !== PLACEHOLDER && !(_.size(cachedDatasets) > 0)) {
       loadDatasets().then(function (response) {
         setAvailableDatasets(response);
         updateState(appState, "state.cache.datasets", response);
@@ -91,7 +117,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
 
         {selectedProject && PLACEHOLDER !== selectedProject &&
           <Box>
-            <FormField label={<Text>Choose a Dataset or Create <TextButton onClick={(e) => alert('TBD: Show a dialog to create a new dataset')}>a new one</TextButton>.</Text>}>
+            <FormField label={<Text>Choose a Dataset or Create <TextButton onClick={(e) => setShowCreateDatasetDialog(true)}>a new one</TextButton>.</Text>}>
               <Select
                 options={availableDatasets}
                 value={selectedDataset}
@@ -112,6 +138,51 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
               />
             </FormField>
           </Box>
+        }
+
+        {showCreateDatasetDialog &&
+          <Dialog onClose={() => setShowCreateDatasetDialog(false)} width="320px">
+            <Dialog.CloseButton />
+            <Heading>Create Dataset</Heading>
+            <Box>
+              <FormField label="Name of the new Dataset">
+                <Input
+                  value={newDatasetName}
+                  onChange={(value) => {
+                    setNewDatasetName(value.target.value);
+                  }}
+                />
+              </FormField>
+            </Box>
+
+            <Box>
+              <FormField label="Classification Type">
+                <Select
+                  options={[
+                    { value: "MULTICLASS", label: "MULTICLASS" },
+                    { value: "MULTILABEL", label: "MULTILABEL" },
+                  ]}
+                  value={newDatasetClassificationType}
+                  disabled={!createDatasetIsLoading}
+                  onChange={(value) => {
+                    setNewDatasetClassificationType(value as string);
+                  }}
+                />
+              </FormField>
+            </Box>
+
+            <Box>
+              {
+                dialogErrorMessage !== "" && <Text paddingBottom='5px' textColor='red'>Note: {dialogErrorMessage}</Text>
+              }
+
+            </Box>
+
+            <Box display='flex' justifyContent='space-between'>
+              <Button icon={createDatasetIsLoading ? <Loader /> : <></>} variant='primary' onClick={createDataset}>Create</Button>
+              <Button onClick={() => setShowCreateDatasetDialog(false)}>Cancel</Button>
+            </Box>
+          </Dialog>
         }
 
       </Box>
