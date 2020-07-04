@@ -1,4 +1,4 @@
-import { BaseClient } from './base';
+import { BaseClient, ErrorResponse } from './base';
 import { DEFAULT_AUTOML_ENDPOINT, UseSettingsHook } from '../settings';
 
 type ImageClassificationDatasetMetadata = {
@@ -26,5 +26,15 @@ export class AutoMLClient extends BaseClient {
 
   async listDatasets(projectId): Promise<ListDatasetsResponse> {
     return await this._makeRequestGet(`/v1/projects/${projectId}/locations/us-central1/datasets`);
+  }
+
+  async createDataset(projectId, nameOfDataset, typeOfClassification): Promise<ListDatasetsResponse | ErrorResponse> {
+    const payload = {
+      displayName: nameOfDataset,
+      imageClassificationDatasetMetadata: {
+        classificationType: typeOfClassification
+      }
+    }
+    return await this._makeRequestPost(`/v1/projects/${projectId}/locations/us-central1/datasets`, payload);
   }
 }

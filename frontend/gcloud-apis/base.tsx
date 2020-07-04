@@ -1,6 +1,15 @@
 import { GoogleToken } from 'gtoken';
 import { Settings, UseSettingsHook } from '../settings';
 
+export type ErrorDetails = {
+  code: number,
+  message: string,
+  status: string
+}
+export type ErrorResponse = {
+  error: ErrorDetails,
+}
+
 export abstract class BaseClient {
   protected endpoint: string;
   protected gtoken: GoogleToken = undefined;
@@ -14,14 +23,12 @@ export abstract class BaseClient {
   }
 
   protected async _makeRequestGet(resource) {
-    // at this point the gtoken should be valid with a access token
     const accessToken = await this.accessToken();
     console.log(accessToken);
 
     const response = await fetch(`${this.endpoint}${resource}`, {
       credentials: 'include',
       headers: {
-        //'Content-Type': 'application/json',
         'Accept': '*/*',
         'Authorization': `Bearer ${accessToken}`
       },
@@ -29,7 +36,38 @@ export abstract class BaseClient {
       referrerPolicy: 'no-referrer',
     });
 
-    return response.json();
+    return this.handleResponse(response);
+  }
+
+  protected async _makeRequestPost(resource, body) {
+    const accessToken = await this.accessToken();
+
+    const response = await fetch(`${this.endpoint}${resource}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      redirect: 'follow',
+      referrerPolicy: 'no-referrer',
+      body: JSON.stringify(body),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  private async handleResponse(response: Response): Promise<any> {
+    console.log(response);
+    const responseAsJson = await response.json() as any | ErrorResponse;
+    console.log(responseAsJson);
+    if (response.status !== 200) {
+      // this is now an error
+      throw responseAsJson;
+    } else {
+      return responseAsJson;
+    }
+
   }
 
   private async accessToken(): Promise<string> {
