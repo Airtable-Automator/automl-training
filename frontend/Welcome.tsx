@@ -16,21 +16,21 @@ import {
 } from '@airtable/blocks/ui';
 
 import React, { useState, useEffect } from 'react';
-import { GCLOUD_SVC_EMAIL, GCLOUD_SVC_PRIVATE_KEY, GCLOUD_AUTOML_PROXY, GCLOUD_GS_PROXY, DEFAULT_AUTOML_PROXY, DEFAULT_GS_PROXY } from './settings';
+import { GCLOUD_SVC_EMAIL, GCLOUD_SVC_PRIVATE_KEY, GCLOUD_AUTOML_ENDPOINT, GCLOUD_GS_ENDPOINT, DEFAULT_AUTOML_ENDPOINT, DEFAULT_GS_ENDPOINT, DEFAULT_CRM_ENDPOINT, GCLOUD_CRM_ENDPOINT } from './settings';
 import GlobalConfig from '@airtable/blocks/dist/types/src/global_config';
 import { GoogleToken } from 'gtoken';
 import CSS from 'csstype';
 
 async function checkForDefaultProxyUrls(globalConfig: GlobalConfig) {
-  const autoMLProxy = globalConfig.get(GCLOUD_AUTOML_PROXY) as string;
-  const gsProxy = globalConfig.get(GCLOUD_GS_PROXY) as string;
+  const autoMLProxy = globalConfig.get(GCLOUD_AUTOML_ENDPOINT) as string;
+  const gsProxy = globalConfig.get(GCLOUD_GS_ENDPOINT) as string;
 
   if (!autoMLProxy || autoMLProxy === "") {
-    await globalConfig.setAsync(GCLOUD_AUTOML_PROXY, DEFAULT_AUTOML_PROXY)
+    await globalConfig.setAsync(GCLOUD_AUTOML_ENDPOINT, DEFAULT_AUTOML_ENDPOINT)
   }
 
   if (!gsProxy || gsProxy === "") {
-    await globalConfig.setAsync(GCLOUD_GS_PROXY, DEFAULT_GS_PROXY)
+    await globalConfig.setAsync(GCLOUD_GS_ENDPOINT, DEFAULT_GS_ENDPOINT)
   }
 }
 
@@ -81,6 +81,7 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
 
     try {
       const _ = await gtoken.getToken();
+      console.log(_);
       // validation success
       setLoading(false);
       setAppState({ index: 1 });
@@ -130,14 +131,21 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
           </Box>
 
           <Box>
-            <FormField label={"AutoML CORS Proxy URL (Default: " + DEFAULT_AUTOML_PROXY + ")"}>
-              <InputSynced type='url' required={true} globalConfigKey={GCLOUD_AUTOML_PROXY} />
+            <FormField label={"AutoML API Endpoint (Default: " + DEFAULT_AUTOML_ENDPOINT + ")"}>
+              <InputSynced type='url' required={true} globalConfigKey={GCLOUD_AUTOML_ENDPOINT} />
             </FormField>
           </Box>
 
           <Box>
-            <FormField label={"Cloud Storage CORS Proxy URL (Default: " + DEFAULT_GS_PROXY + ")"}>
-              <InputSynced type='url' required={true} globalConfigKey={GCLOUD_GS_PROXY} />
+            <FormField label={"Cloud Storage API Endpoint (Default: " + DEFAULT_GS_ENDPOINT + ")"}>
+              <InputSynced type='url' required={true} globalConfigKey={GCLOUD_GS_ENDPOINT} />
+            </FormField>
+          </Box>
+
+
+          <Box>
+            <FormField label={"Resource Manager API Endpoint (Default: " + DEFAULT_CRM_ENDPOINT + ")"}>
+              <InputSynced type='url' required={true} globalConfigKey={GCLOUD_CRM_ENDPOINT} />
             </FormField>
           </Box>
 
