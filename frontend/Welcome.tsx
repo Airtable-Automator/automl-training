@@ -16,21 +16,25 @@ import {
 } from '@airtable/blocks/ui';
 
 import React, { useState, useEffect } from 'react';
-import { GCLOUD_SVC_EMAIL, GCLOUD_SVC_PRIVATE_KEY, GCLOUD_AUTOML_ENDPOINT, GCLOUD_GS_ENDPOINT, DEFAULT_AUTOML_ENDPOINT, DEFAULT_GS_ENDPOINT, DEFAULT_CRM_ENDPOINT, GCLOUD_CRM_ENDPOINT } from './settings';
+import { isEmpty, GCLOUD_SVC_EMAIL, GCLOUD_SVC_PRIVATE_KEY, GCLOUD_AUTOML_ENDPOINT, GCLOUD_GS_ENDPOINT, DEFAULT_AUTOML_ENDPOINT, DEFAULT_GS_ENDPOINT, DEFAULT_CRM_ENDPOINT, GCLOUD_CRM_ENDPOINT } from './settings';
 import GlobalConfig from '@airtable/blocks/dist/types/src/global_config';
 import { GoogleToken } from 'gtoken';
-import CSS from 'csstype';
 
 async function checkForDefaultProxyUrls(globalConfig: GlobalConfig) {
   const autoMLProxy = globalConfig.get(GCLOUD_AUTOML_ENDPOINT) as string;
   const gsProxy = globalConfig.get(GCLOUD_GS_ENDPOINT) as string;
+  const crmProxy = globalConfig.get(GCLOUD_CRM_ENDPOINT) as string;
 
-  if (!autoMLProxy || autoMLProxy === "") {
-    await globalConfig.setAsync(GCLOUD_AUTOML_ENDPOINT, DEFAULT_AUTOML_ENDPOINT)
+  if (isEmpty(autoMLProxy)) {
+    await globalConfig.setAsync(GCLOUD_AUTOML_ENDPOINT, DEFAULT_AUTOML_ENDPOINT);
   }
 
-  if (!gsProxy || gsProxy === "") {
-    await globalConfig.setAsync(GCLOUD_GS_ENDPOINT, DEFAULT_GS_ENDPOINT)
+  if (isEmpty(gsProxy)) {
+    await globalConfig.setAsync(GCLOUD_GS_ENDPOINT, DEFAULT_GS_ENDPOINT);
+  }
+
+  if (isEmpty(crmProxy)) {
+    await globalConfig.setAsync(GCLOUD_CRM_ENDPOINT, DEFAULT_CRM_ENDPOINT);
   }
 }
 

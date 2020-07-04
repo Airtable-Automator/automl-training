@@ -11,7 +11,7 @@ export const DEFAULT_AUTOML_ENDPOINT = 'https://automl2.ashwanthkumar.in';
 export const DEFAULT_GS_ENDPOINT = 'https://gs.ashwanthkumar.in';
 export const DEFAULT_CRM_ENDPOINT = 'https://cloudresourcemanager.ashwanthkumar.in';
 
-const isEmpty = (input: string) => (!input || input === "")
+export const isEmpty = (input: string) => (!input || input === "")
 
 export function useSettings() {
   const globalConfig = useGlobalConfig();
