@@ -1,6 +1,7 @@
 import {
   useGlobalConfig,
 } from '@airtable/blocks/ui';
+import { isEmpty } from './utils';
 
 export const GCLOUD_SVC_EMAIL = "gcloudServiceEmail";
 export const GCLOUD_SVC_PRIVATE_KEY = "gcloudServicePrivateKey";
@@ -11,8 +12,6 @@ export const GCLOUD_CRM_ENDPOINT = "gcloudCrmProxy";
 export const DEFAULT_AUTOML_ENDPOINT = 'https://automl2.ashwanthkumar.in';
 export const DEFAULT_GS_ENDPOINT = 'https://gs.ashwanthkumar.in';
 export const DEFAULT_CRM_ENDPOINT = 'https://cloudresourcemanager.ashwanthkumar.in';
-
-export const isEmpty = (input: string) => (!input || input === "");
 
 export type Settings = {
   svcEmail: string,
