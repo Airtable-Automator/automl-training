@@ -3,7 +3,7 @@ import { useState, SetStateAction, Dispatch } from 'react';
 // Credit
 // Sourced from https://usehooks.com/useLocalStorage/
 // Hook
-export function useLocalStorage<T extends object | number | string>(key: string, initialValue: T): [T, Dispatch<SetStateAction<T>>] {
+export function useLocalStorage<T extends object | number | string | boolean>(key: string, initialValue: T): [T, Dispatch<SetStateAction<T>>] {
   // State to store our value
   // Pass initial state function to useState so logic is only executed once
   const [storedValue, setStoredValue] = useState(() => {
