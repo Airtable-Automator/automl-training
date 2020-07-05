@@ -101,7 +101,7 @@ const STEP_UPLOAD_IMAGE = 'Uploading Images to Cloud Storage';
 const CREATE_LABELS_CSV = 'Creating and uploading labels.csv for the Dataset';
 const IMPORT_IMAGES_INTO_DATASET = 'Importing Data into Dataset';
 
-export function TrainingInProgress({ appState, setAppState }) {
+export function PreProcessingView({ appState, setAppState }) {
   const settings = useSettings();
   const viewport = useViewport();
   const [currentStep, setCurrentStep] = useState('Initializing');
