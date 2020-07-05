@@ -92,11 +92,16 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
   }
 
   useEffect(() => {
-    if (!_.has(appState, "state.cache.projects")) {
+    const cachedProjects = _.get(appState, "state.cache.projects");
+    if (!cachedProjects) {
       loadProjects().then(function (response) {
         setAvailableProjects(response);
         updateState(appState, "state.cache.projects", response);
       });
+    }
+
+    if (_.size(cachedProjects) > 0) {
+      setAvailableProjects(cachedProjects);
     }
 
     const cachedDatasets = _.get(appState, "state.cache.datasets", []);
@@ -106,6 +111,9 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
         updateState(appState, "state.cache.datasets", response);
       });
     }
+    if (_.size(cachedDatasets) > 0) {
+      setAvailableDatasets(cachedDatasets);
+    }
 
     const cachedBuckets = _.get(appState, "state.cache.buckets", []);
     if (selectedProject && selectedProject !== PLACEHOLDER && !(_.size(cachedBuckets) > 0)) {
@@ -113,6 +121,9 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
         setAvailableBuckets(response);
         updateState(appState, "state.cache.buckets", response);
       });
+    }
+    if (_.size(cachedBuckets) > 0) {
+      setAvailableBuckets(cachedBuckets);
     }
   }, [appState, selectedProject])
 
@@ -122,15 +133,21 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
 
   const next = (e) => {
     e.preventDefault();
+    const selectedDatasetOption = _.find(availableDatasets, function (dataset) {
+      return dataset.value === selectedDataset;
+    });
     const updatedAppState = { ...appState };
     console.log(updatedAppState);
-    console.log(JSON.stringify(updatedAppState));
     updatedAppState.index = updatedAppState.index + 1;
     updatedAppState.state.automl = {
       project: selectedProject,
-      dataset: selectedDataset,
+      dataset: {
+        id: selectedDatasetOption.value,
+        name: selectedDatasetOption.label
+      },
       bucket: selectedBucket,
     }
+    console.log(JSON.stringify(updatedAppState));
     setAppState(updatedAppState);
   }
 
