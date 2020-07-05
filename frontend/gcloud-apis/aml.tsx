@@ -25,8 +25,8 @@ export type Operation = {
   metadata: {
     "@type": string,
     creationTime: string,
-    importDataDetails?: {
-    },
+    importDataDetails?: {},
+    createModelDetails?: {},
     partialFailures?: Array<{
       code: number,
       message: string
@@ -41,7 +41,7 @@ export type Operation = {
     name?: string,
   }
 }
-export type ActiveOperationsResponse = {
+export type Operations = {
   operations: Array<Operation>
 }
 export class AutoMLClient extends BaseClient {
@@ -64,7 +64,7 @@ export class AutoMLClient extends BaseClient {
     return await this._makeRequestPost(`/v1/projects/${projectId}/locations/us-central1/datasets`, payload);
   }
 
-  async importDataIntoDataset(projectId: string, datasetId: string, pathToLabels: string) {
+  async importDataIntoDataset(projectId: string, datasetId: string, pathToLabels: string): Promise<Operation> {
     const payload = {
       inputConfig: {
         gcsSource: {
@@ -79,8 +79,12 @@ export class AutoMLClient extends BaseClient {
     return await this._makeRequestGet(`/v1/projects/${projectId}/locations/us-central1/operations/${operationId}`);
   }
 
-  async activeOperations(projectId: string): Promise<ActiveOperationsResponse> {
+  async activeOperations(projectId: string): Promise<Operations> {
     return await this._makeRequestGet(`/v1/projects/${projectId}/locations/us-central1/operations`);
+  }
+
+  async operation(projectId: string, operationId: string): Promise<Operation> {
+    return await this._makeRequestGet(`/v1/projects/${projectId}/locations/us-central1/operations/${operationId}`);
   }
 
   async waitForAllActiveOperationsToComplete(projectId: string, refreshInterval: number = 5000) {
@@ -96,4 +100,32 @@ export class AutoMLClient extends BaseClient {
       }
     }
   }
+
+  async createModel(projectId: string, datasetId: string, modelDisplayName: string, trainingBudget: number): Promise<Operation> {
+    const payload = {
+      displayName: modelDisplayName,
+      datasetId: datasetId,
+      imageClassificationModelMetadata: {
+        trainBudgetMilliNodeHours: 1000 * trainingBudget,
+        modelType: "cloud",
+      }
+    };
+
+    return await this._makeRequestPost(`/v1/projects/${projectId}/locations/us-central1/models`, payload);
+  }
+
+  async waitForActiveOperationToComplete(projectId: string, operationId: string, refreshInterval: number = 5000): Promise<Operation> {
+    let waitForOps = true;
+    while (waitForOps) {
+      const activeOperation = await this.operation(projectId, operationId);
+      waitForOps = !activeOperation.done;
+
+      if (waitForOps) {
+        await new Promise(r => setTimeout(r, refreshInterval));
+      } else {
+        return activeOperation;
+      }
+    }
+  }
+
 }
