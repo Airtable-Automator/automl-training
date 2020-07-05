@@ -85,17 +85,15 @@ async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: stri
   const datasetId = _.last(datasetMachineName.split('/'));
 
   try {
-    await automlClient.importDataIntoDataset(project, datasetId, `gs://${bucket}/automl-training/${table.name}/labels2.csv`);
+    const operation = await automlClient.importDataIntoDataset(project, datasetId, `gs://${bucket}/automl-training/${table.name}/labels2.csv`);
+    console.log("Op from importData response");
+    console.log(operation);
   } catch (err) {
     // we get error which represents that an existing import is already running, we can ignore this and move on
   }
   setProgress(0.66);
   await automlClient.waitForAllActiveOperationsToComplete(project);
   setProgress(1.0);
-}
-
-async function startModelTraining(automlClient: AutoMLClient, project: string, datasetMachineName: string, bucket: string, table: Table, setProgress) {
-
 }
 
 const STEP_UPLOAD_IMAGE = 'Uploading Images to Cloud Storage';
@@ -113,6 +111,12 @@ export function PreProcessingView({ appState, setAppState }) {
   const sourceTable = base.getTableByNameIfExists(appState.state.source.table);
   const gsClient = new GsClient(settings, settings.settings.gsEndpoint);
   const automlClient = new AutoMLClient(settings, settings.settings.automlEndpoint);
+
+  const startTraining = () => {
+    const updatedAppState = { ...appState };
+    updatedAppState.index = 5;
+    setAppState(updatedAppState);
+  }
 
   useEffect(() => {
     const trainingState = _.get(appState, "state.training");
@@ -217,7 +221,7 @@ export function PreProcessingView({ appState, setAppState }) {
           {
             tail && tail.status && completedSteps.length == 3 &&
             <Box padding='20px'>
-              <Button variant='primary'>Proceed to Training</Button>
+              <Button variant='primary' onClick={startTraining}>Proceed to Training</Button>
             </Box>
           }
         </Box>
