@@ -7,6 +7,8 @@ type ListBucket = {
   id: string,
   kind: string,
   name: string,
+  location: string,
+  locationType: string,
 }
 
 type ListBucketsResponse = {
@@ -28,8 +30,12 @@ export class GsClient extends BaseClient {
   }
 
   async objectExist(bucket, name: string) {
-    const response = await this._makeRequestGet(`/storage/v1/b/${bucket}/o/${encodeURIComponent(name)}`);
-    return "storage#object" === response.kind;
+    try {
+      const response = await this._makeRequestGet(`/storage/v1/b/${bucket}/o/${encodeURIComponent(name)}`);
+      return "storage#object" === response.kind;
+    } catch (err) {
+      return false;
+    }
   }
 
   protected async _upload(resource: string, blob: Blob, contentType: string) {
