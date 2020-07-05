@@ -19,20 +19,23 @@ import _ from 'lodash';
 import { CloudResourceManagerClient } from './gcloud-apis/crm';
 import { ErrorResponse } from './gcloud-apis/base';
 import { useSettings } from './settings';
-import { updateState } from './utils';
+import { updateState, isNotEmpty } from './utils';
 import { SelectOption, SelectOptionValue } from '@airtable/blocks/dist/types/src/ui/select_and_select_buttons_helpers';
 import { AutoMLClient } from './gcloud-apis/aml';
+import { GsClient } from './gcloud-apis/gs';
 
 const PLACEHOLDER = "__PLACEHOLDER__";
 
 export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
   const settings = useSettings();
-  const [storagePath, setStoragePath] = useState('');
   const [availableProjects, setAvailableProjects] = useState<Array<SelectOption>>([{ value: PLACEHOLDER, label: "Loading..." }]);
   const [selectedProject, setSelectedProject] = useState<SelectOptionValue>(undefined);
 
   const [availableDatasets, setAvailableDatasets] = useState<Array<SelectOption>>([{ value: PLACEHOLDER, label: "Loading..." }]);
   const [selectedDataset, setSelectedDataset] = useState<SelectOptionValue>(undefined);
+
+  const [availableBuckets, setAvailableBuckets] = useState<Array<SelectOption>>([{ value: PLACEHOLDER, label: "Loading..." }]);
+  const [selectedBucket, setSelectedBucket] = useState<SelectOptionValue>(undefined);
 
   const [showCreateDatasetDialog, setShowCreateDatasetDialog] = useState(false);
   const [newDatasetName, setNewDatasetName] = useState('');
@@ -66,8 +69,6 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
     setCreateDatasetIsLoading(true);
     try {
       const response = await amlClient.createDataset(selectedProject, newDatasetName, newDatasetClassificationType);
-      console.log("In #createDataset");
-      console.log(response);
       setCreateDatasetIsLoading(false);
       setShowCreateDatasetDialog(false);
       setNewDatasetName('');
@@ -77,6 +78,17 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
       setCreateDatasetIsLoading(false);
       setDialogErrorMessage(errorResponse.error.message);
     }
+  }
+
+  const gsClient = new GsClient(settings, settings.settings.gsEndpoint);
+  const loadBuckets = async () => {
+    const buckets = await gsClient.listBuckets(selectedProject as string);
+    return _.map(buckets.items, function (bucket) {
+      return {
+        value: bucket.id,
+        label: bucket.name,
+      }
+    });
   }
 
   useEffect(() => {
@@ -94,9 +106,32 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
         updateState(appState, "state.cache.datasets", response);
       });
     }
+
+    const cachedBuckets = _.get(appState, "state.cache.buckets", []);
+    if (selectedProject && selectedProject !== PLACEHOLDER && !(_.size(cachedBuckets) > 0)) {
+      loadBuckets().then(function (response) {
+        setAvailableBuckets(response);
+        updateState(appState, "state.cache.buckets", response);
+      });
+    }
   }, [appState, selectedProject])
 
   const viewport = useViewport();
+
+  const isValid = isNotEmpty(selectedProject as string) && isNotEmpty(selectedDataset as string) && isNotEmpty(selectedBucket as string);
+
+  const next = (e) => {
+    e.preventDefault();
+    const updatedAppState = { ...appState };
+    console.log(updatedAppState);
+    updatedAppState.index = updatedAppState.index + 1;
+    updatedAppState.state.automl = {
+      project: selectedProject,
+      dataset: selectedDataset,
+      bucket: selectedBucket,
+    }
+    setAppState(updatedAppState);
+  }
 
   return (
     <Box display="flex" alignItems="center" justifyContent="center" border="default" flexDirection="column" width={viewport.size.width} height={viewport.size.height} padding={0}>
@@ -122,19 +157,6 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
                 options={availableDatasets}
                 value={selectedDataset}
                 onChange={(value) => { setSelectedDataset(value); }}
-              />
-            </FormField>
-          </Box>
-        }
-
-        {selectedDataset && PLACEHOLDER !== selectedDataset &&
-          <Box>
-            <FormField label="Enter Cloud Storage Bucket Path for the dataset">
-              <Input
-                value={storagePath}
-                onChange={(value) => {
-                  setStoragePath(value.target.value);
-                }}
               />
             </FormField>
           </Box>
@@ -184,6 +206,23 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
             </Box>
           </Dialog>
         }
+
+        {selectedDataset && PLACEHOLDER !== selectedDataset &&
+          <Box>
+            <FormField label="Choose Cloud Storage Bucket for the dataset">
+              <Select
+                options={availableBuckets}
+                value={selectedBucket}
+                onChange={(value) => { setSelectedBucket(value); }}
+              />
+            </FormField>
+          </Box>
+        }
+
+        {isValid &&
+          <Box flexDirection='row-reverse'>
+            <Button variant="primary" onClick={next}>Next</Button>
+          </Box>}
 
       </Box>
     </Box>
