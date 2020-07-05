@@ -57,7 +57,7 @@ export function ReviewSettings({ appState, setAppState }) {
     setAppState(updatedAppState);
   }
 
-  const startTraining = (e) => {
+  const startPreprocessing = (e) => {
     e.preventDefault();
     const updatedAppState = { ...appState };
     updatedAppState.index = 4;
@@ -119,9 +119,9 @@ export function ReviewSettings({ appState, setAppState }) {
           </Box>
 
           <Box className='center' paddingTop='20px'>
-            <Button variant='primary' width='180px' onClick={startTraining}>
+            <Button variant='primary' width='180px' onClick={startPreprocessing}>
               <Box className='center'>
-                <Icon name='play' size={16} /> &nbsp; Start Training
+                <Icon name='play' size={16} /> &nbsp; Start Pre-processing
               </Box>
             </Button>
           </Box>
