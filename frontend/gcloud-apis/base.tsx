@@ -15,7 +15,7 @@ export abstract class BaseClient {
   protected gtoken: GoogleToken = undefined;
 
   private settings: UseSettingsHook;
-  private existingSettingsHash = -1;
+  private existingSettingsHash = undefined;
 
   constructor(settings: UseSettingsHook, endpoint: string) {
     this.endpoint = endpoint;
@@ -57,7 +57,7 @@ export abstract class BaseClient {
     return this.handleResponse(response);
   }
 
-  private async handleResponse(response: Response): Promise<any> {
+  protected async handleResponse(response: Response): Promise<any> {
     console.log(response);
     const responseAsJson = await response.json() as any | ErrorResponse;
     console.log(responseAsJson);
@@ -70,7 +70,7 @@ export abstract class BaseClient {
 
   }
 
-  private async accessToken(): Promise<string> {
+  protected async accessToken(): Promise<string> {
     const settings = this.settings;
     if (!settings.isValid) {
       throw new Error("Can't create gToken, settings are invalid. Error - " + settings.message);
@@ -79,7 +79,7 @@ export abstract class BaseClient {
     const newSettingsHash = JSON.stringify(settings).hashCode();
 
     // Refresh the token when gToken is not defined or when settings change since the last time we created GoogleToken instance
-    if (!this.gtoken || newSettingsHash !== this.existingSettingsHash) {
+    if (!this.gtoken || !this.existingSettingsHash || newSettingsHash !== this.existingSettingsHash) {
       this.gtoken = new GoogleToken({
         email: settings.settings.svcEmail,
         key: settings.settings.svcKey,
@@ -90,7 +90,7 @@ export abstract class BaseClient {
     }
 
     if (this.gtoken.hasExpired) {
-      this.gtoken.getToken();
+      const _ = await this.gtoken.getToken();
     }
 
     return this.gtoken.accessToken;

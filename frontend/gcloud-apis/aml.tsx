@@ -35,6 +35,6 @@ export class AutoMLClient extends BaseClient {
         classificationType: typeOfClassification
       }
     }
-    return await this._makeRequestPost(`/v1/projects/${projectId}/locations/us-central1/datasets`, payload);
+    return await this._upload(`/v1/projects/${projectId}/locations/us-central1/datasets`, payload);
   }
 }
