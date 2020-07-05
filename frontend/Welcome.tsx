@@ -16,7 +16,8 @@ import {
 } from '@airtable/blocks/ui';
 
 import React, { useState, useEffect } from 'react';
-import { isEmpty, GCLOUD_SVC_EMAIL, GCLOUD_SVC_PRIVATE_KEY, GCLOUD_AUTOML_ENDPOINT, GCLOUD_GS_ENDPOINT, DEFAULT_AUTOML_ENDPOINT, DEFAULT_GS_ENDPOINT, DEFAULT_CRM_ENDPOINT, GCLOUD_CRM_ENDPOINT } from './settings';
+import { GCLOUD_SVC_EMAIL, GCLOUD_SVC_PRIVATE_KEY, GCLOUD_AUTOML_ENDPOINT, GCLOUD_GS_ENDPOINT, DEFAULT_AUTOML_ENDPOINT, DEFAULT_GS_ENDPOINT, DEFAULT_CRM_ENDPOINT, GCLOUD_CRM_ENDPOINT } from './settings';
+import { isEmpty } from './utils';
 import GlobalConfig from '@airtable/blocks/dist/types/src/global_config';
 import { GoogleToken } from 'gtoken';
 
