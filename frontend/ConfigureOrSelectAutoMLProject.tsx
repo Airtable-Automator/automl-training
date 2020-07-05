@@ -124,6 +124,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
     e.preventDefault();
     const updatedAppState = { ...appState };
     console.log(updatedAppState);
+    console.log(JSON.stringify(updatedAppState));
     updatedAppState.index = updatedAppState.index + 1;
     updatedAppState.state.automl = {
       project: selectedProject,
@@ -221,7 +222,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
 
         {isValid &&
           <Box flexDirection='row-reverse'>
-            <Button variant="primary" onClick={next}>Next</Button>
+            <Button variant="primary" onClick={next}>Review Settings</Button>
           </Box>}
 
       </Box>

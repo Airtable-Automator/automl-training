@@ -80,7 +80,7 @@ export function ChooseSource({ appState, setAppState }) {
 
           {isValid &&
             <Box flexDirection='row-reverse'>
-              <Button variant="primary" onClick={next}>Next</Button>
+              <Button variant="primary" onClick={next}>Configure AutoML Settings</Button>
             </Box>}
         </form>
       </Box>
