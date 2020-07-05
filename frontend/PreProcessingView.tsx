@@ -6,6 +6,7 @@ import PQueue from 'p-queue';
 import { useSettings } from './settings';
 import { GsClient } from './gcloud-apis/gs';
 import { AutoMLClient } from './gcloud-apis/aml';
+import { useLocalStorage } from './use_local_storage';
 
 const queue = new PQueue({ concurrency: 1 });
 
@@ -104,10 +105,10 @@ const IMPORT_IMAGES_INTO_DATASET = 'Importing Data into Dataset';
 export function PreProcessingView({ appState, setAppState }) {
   const settings = useSettings();
   const viewport = useViewport();
-  const [currentStep, setCurrentStep] = useState('Initializing');
-  const [progress, setProgress] = useState(0.0);
   const base = useBase();
-  const [completedSteps, setCompletedSteps] = useState([]);
+  const [completedSteps, setCompletedSteps] = useLocalStorage('preProcessing.completedSteps', []);
+  const [currentStep, setCurrentStep] = useLocalStorage('preProcessing.currentStep', 'Initializing' as string);
+  const [progress, setProgress] = useLocalStorage('preProcessing.progress', 0.0 as number);
 
   const sourceTable = base.getTableByNameIfExists(appState.state.source.table);
   const gsClient = new GsClient(settings, settings.settings.gsEndpoint);
@@ -132,7 +133,6 @@ export function PreProcessingView({ appState, setAppState }) {
           uploadImages(gsClient, appState.state.automl.bucket, sourceTable, appState.state.source.imageField, setProgress).then(function (res) {
             let updatedAppState = _.set(appState, "state.training.stage", 2);
             setAppState(updatedAppState);
-            setCurrentStep(CREATE_LABELS_CSV);
             setCompletedSteps(_.concat(completedSteps, { name: STEP_UPLOAD_IMAGE, status: true }));
             setProgress(0.0);
           }).catch(function (err) {
@@ -142,15 +142,15 @@ export function PreProcessingView({ appState, setAppState }) {
           return;
 
         case 2:
+          setCurrentStep(CREATE_LABELS_CSV);
           setProgress(0.01);
           // create a CSV and upload it to GCS
           createLabelsCSV(gsClient, appState.state.automl.bucket, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
             console.log("Created Labels on GCS. Next step, import the dataset into AutoML");
             let updatedAppState = _.set(appState, "state.training.stage", 3);
             setAppState(updatedAppState);
-
-            setCurrentStep(IMPORT_IMAGES_INTO_DATASET);
             setCompletedSteps(_.concat(completedSteps, { name: CREATE_LABELS_CSV, status: true }));
+
             setProgress(0.0);
           }).catch(function (err) {
             console.error(err);
@@ -159,6 +159,7 @@ export function PreProcessingView({ appState, setAppState }) {
           return;
 
         case 3:
+          setCurrentStep(IMPORT_IMAGES_INTO_DATASET);
           setProgress(0.01);
           importDatasetIntoAutoML(automlClient, appState.state.automl.project, appState.state.automl.dataset.id, appState.state.automl.bucket, sourceTable, setProgress).then(function (res) {
             console.log("Imported Dataset into AutoML. Next step, Start training the model on AutoML");
@@ -171,7 +172,6 @@ export function PreProcessingView({ appState, setAppState }) {
             console.error(err);
           });
           return;
-        // Start Training on AutoML
       }
     }
   }, [appState, currentStep, progress]);
@@ -183,7 +183,7 @@ export function PreProcessingView({ appState, setAppState }) {
       <Box maxWidth='650px'>
         <Box paddingBottom='10px' display='flex' alignItems='center' justifyContent='center'>
           <Heading size='xlarge'>Pre-Processing
-            {(!tail || (tail && tail.status)) && " In Progress"}
+            {(!tail || (tail && tail.status)) && completedSteps.length < 3 && " In Progress"}
             {tail && !tail.status && " Failed"}
             {completedSteps.length == 3 && " Completed"}
           </Heading>
