@@ -189,6 +189,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
               <FormField label="Name of the new Dataset">
                 <Input
                   value={newDatasetName}
+                  disabled={createDatasetIsLoading}
                   onChange={(value) => {
                     setNewDatasetName(value.target.value);
                   }}
@@ -204,7 +205,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
                     { value: "MULTILABEL", label: "MULTILABEL" },
                   ]}
                   value={newDatasetClassificationType}
-                  disabled={!createDatasetIsLoading}
+                  disabled={createDatasetIsLoading}
                   onChange={(value) => {
                     setNewDatasetClassificationType(value as string);
                   }}
