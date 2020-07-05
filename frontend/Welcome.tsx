@@ -89,7 +89,13 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
       console.log(_);
       // validation success
       setLoading(false);
-      setAppState({ index: 1 });
+
+      const updatedAppState = { ...appState };
+      console.log(updatedAppState);
+      console.log(JSON.stringify(updatedAppState));
+      updatedAppState.index = 1;
+      setAppState(updatedAppState);
+
       setIsSettingsVisible(false);
     } catch (e) {
       setLoading(false);
