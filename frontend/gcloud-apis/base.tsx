@@ -58,7 +58,9 @@ export abstract class BaseClient {
   }
 
   private async handleResponse(response: Response): Promise<any> {
+    console.log(response);
     const responseAsJson = await response.json() as any | ErrorResponse;
+    console.log(responseAsJson);
     if (response.status !== 200) {
       // this is now an error
       throw responseAsJson;
