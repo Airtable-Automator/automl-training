@@ -87,6 +87,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
       return {
         value: bucket.id,
         label: bucket.name,
+        disabled: !(bucket.location === "US-CENTRAL1" && bucket.locationType === "region"),
       }
     });
   }
