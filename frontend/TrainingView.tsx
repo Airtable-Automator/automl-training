@@ -24,7 +24,12 @@ async function createModel(automlClient: AutoMLClient, modelName: string, datase
   } else {
     console.log("Found an existing Operation for Model Training, so using that to track progress: " + operationId);
   }
-  await automlClient.waitForActiveOperationToComplete(projectId, operationId);
+  try {
+    await automlClient.waitForActiveOperationToComplete(projectId, operationId);
+  } catch (e) {
+    console.log(e);
+    setErrorMessage(e.error.message);
+  }
 }
 
 export function TrainingView({ appState, setAppState }) {
