@@ -70,7 +70,7 @@ export function ReviewSettings({ appState, setAppState }) {
 
   return (
     <Box display="flex" alignItems="center" justifyContent="center" border="default" flexDirection="column" width={viewport.size.width} height={viewport.size.height} padding={0} className='review-settings'>
-      <Box maxWidth='650px'>
+      <Box maxWidth='580px'>
         <Box paddingBottom='10px' display='flex' alignItems='center' justifyContent='center'>
           <Heading size='xlarge'>Review Settings</Heading>
         </Box>
