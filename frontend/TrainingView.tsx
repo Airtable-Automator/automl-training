@@ -23,7 +23,7 @@ async function createModel(automlClient: AutoMLClient, modelName: string, datase
   } else {
     console.log("Found an existing Operation for Model Training, so using that to track progress: " + operationId);
   }
-  await automlClient.waitForActiveOperationToComplete(projectId, operationId, 5000);
+  await automlClient.waitForActiveOperationToComplete(projectId, operationId);
 }
 
 export function TrainingView({ appState, setAppState }) {
@@ -47,10 +47,12 @@ export function TrainingView({ appState, setAppState }) {
   })();
 
   const completeModelTraining = () => {
-    const updatedAppState = { ...appState };
-    updatedAppState.index = 6;
-    const withModelName = _.set(updatedAppState, "state.train.modelName", modelName);
-    setAppState(withModelName);
+    if (errorMessage && '' !== errorMessage) {
+      const updatedAppState = { ...appState };
+      updatedAppState.index = 6;
+      const withModelName = _.set(updatedAppState, "state.train.modelName", modelName);
+      setAppState(withModelName);
+    }
   }
 
   const startTraining = async (e) => {
