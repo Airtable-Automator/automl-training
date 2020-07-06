@@ -5,6 +5,7 @@ import {
     useSettingsButton,
     Box,
 } from '@airtable/blocks/ui';
+import {viewport} from '@airtable/blocks';
 import React, { useState, useEffect } from 'react';
 import { Welcome } from './Welcome';
 import { useSettings } from './settings';
@@ -14,6 +15,13 @@ import { ReviewSettings } from './ReviewSettings';
 import { PreProcessingView } from './PreProcessingView';
 import { useLocalStorage } from './use_local_storage';
 import { TrainingView } from './TrainingView';
+
+// Determines the minimum size the block needs before it asks the user to enlarge the block.
+viewport.addMinSize({
+    height: 400,
+    width: 650,
+});
+
 
 type AppState = {
     index: number,

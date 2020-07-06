@@ -23,7 +23,7 @@ async function createModel(automlClient: AutoMLClient, modelName: string, datase
   } else {
     console.log("Found an existing Operation for Model Training, so using that to track progress: " + operationId);
   }
-  await automlClient.waitForActiveOperationToComplete(projectId, operationId);
+  await automlClient.waitForActiveOperationToComplete(projectId, operationId, 5000);
 }
 
 export function TrainingView({ appState, setAppState }) {
@@ -41,8 +41,16 @@ export function TrainingView({ appState, setAppState }) {
       setLoading(true);
       await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
       setLoading(false);
+      setTrainingOpId('');
     }
   })();
+
+  const completeModelTraining = () => {
+    const updatedAppState = { ...appState };
+    updatedAppState.index = 6;
+    updatedAppState.state.train.modelName = modelName;
+    setAppState(updatedAppState);
+  }
 
   const startTraining = async (e) => {
     e.preventDefault();
@@ -56,7 +64,7 @@ export function TrainingView({ appState, setAppState }) {
   return (
     <Box display="flex" alignItems="center" justifyContent="center" border="default" flexDirection="column" width={viewport.size.width} height={viewport.size.height} padding={0} className='review-settings'>
       <form onSubmit={startTraining}>
-        <Box width='650px'>
+        <Box width='500px'>
           <Box paddingBottom='10px' display='flex' alignItems='center' justifyContent='center'>
             <Heading size='xlarge'>Train a new Model</Heading>
           </Box>

@@ -9,8 +9,10 @@ import { AutoMLClient } from './gcloud-apis/aml';
 import { useLocalStorage } from './use_local_storage';
 
 const queue = new PQueue({ concurrency: 1 });
+
+const gsPrefix = 'automl-training9'; // TODO: Make be take this as a config from the user during the model building process
 const gsPath = (datasetId, name) => {
-  return `automl-training9/${datasetId}/${name}`
+  return `${gsPrefix}/${datasetId}/${name}`
 }
 
 async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineName: string, table: Table, imageFieldName: string, labelFieldName: string, setProgress) {
@@ -24,7 +26,7 @@ async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineNa
     console.log(img);
     const label = record.getCellValue(labelFieldName);
 
-    if (img) {
+    if (img && label) {
       // value exist in the cell
       const i = img[0]; // we by default pick only the first image
       const fileExt = _.last(i.type.split('/'));
@@ -63,7 +65,7 @@ async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachin
 
   const query = await table.selectRecordsAsync();
 
-  const objects = await gsClient.listObjects(bucket, 'automl-training7');
+  const objects = await gsClient.listObjects(bucket, gsPrefix);
   console.log(objects);
   const labels = objects.items.map(function (obj) {
     return `gs://${bucket}/${obj.name},${obj.metadata.label}`
@@ -136,7 +138,7 @@ export function PreProcessingView({ appState, setAppState }) {
 
   const restartPreProcessing = () => {
     const updatedAppState = { ...appState };
-    delete updatedAppState.state['training'];
+    delete updatedAppState.state['preproc'];
     setAppState(updatedAppState);
     setCompletedSteps([]);
     setProgress(0.0);
@@ -144,9 +146,9 @@ export function PreProcessingView({ appState, setAppState }) {
   }
 
   useEffect(() => {
-    const trainingState = _.get(appState, "state.training");
-    if (!trainingState) {
-      let updatedAppState = _.set(appState, "state.training.stage", 1);
+    const preProcState = _.get(appState, "state.preproc");
+    if (!preProcState) {
+      let updatedAppState = _.set(appState, "state.preproc.stage", 1);
       setAppState(updatedAppState);
       // start the training progress
       console.log(STEP_UPLOAD_IMAGE);
@@ -154,13 +156,13 @@ export function PreProcessingView({ appState, setAppState }) {
       setProgress(0.0);
     }
 
-    if (trainingState && 0.0 === progress) {
-      switch (trainingState.stage) {
+    if (preProcState && 0.0 === progress) {
+      switch (preProcState.stage) {
         case 1:
           // we need to start uploading
           setProgress(0.01);
           uploadImages(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
-            let updatedAppState = _.set(appState, "state.training.stage", 2);
+            let updatedAppState = _.set(appState, "state.preproc.stage", 2);
             setAppState(updatedAppState);
             setCompletedSteps(_.concat(completedSteps, { name: STEP_UPLOAD_IMAGE, status: true }));
             setProgress(0.0);
@@ -176,7 +178,7 @@ export function PreProcessingView({ appState, setAppState }) {
           // create a CSV and upload it to GCS
           createLabelsCSV(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
             console.log("Created Labels on GCS. Next step, import the dataset into AutoML");
-            let updatedAppState = _.set(appState, "state.training.stage", 3);
+            let updatedAppState = _.set(appState, "state.preproc.stage", 3);
             setAppState(updatedAppState);
             setCompletedSteps(_.concat(completedSteps, { name: CREATE_LABELS_CSV, status: true }));
 
@@ -192,7 +194,7 @@ export function PreProcessingView({ appState, setAppState }) {
           setProgress(0.01);
           importDatasetIntoAutoML(automlClient, appState.state.automl.project, appState.state.automl.dataset.id, appState.state.automl.bucket, sourceTable, setProgress, preProcOpId, setPreProcOpId, setErrorMessage).then(function (res) {
             console.log("Imported Dataset into AutoML. Next step, Start training the model on AutoML");
-            let updatedAppState = _.set(appState, "state.training.stage", 4);
+            let updatedAppState = _.set(appState, "state.preproc.stage", 4);
             setAppState(updatedAppState);
 
             setCompletedSteps(_.concat(completedSteps, { name: IMPORT_IMAGES_INTO_DATASET, status: true }));
