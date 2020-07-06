@@ -12,6 +12,8 @@ import { ConfigureOrSelectAutoMLProject } from './ConfigureOrSelectAutoMLProject
 import { ChooseSource } from './ChooseSource';
 import { ReviewSettings } from './ReviewSettings';
 import { PreProcessingView } from './PreProcessingView';
+import { useLocalStorage } from './use_local_storage';
+import { TrainingView } from './TrainingView';
 
 type AppState = {
     index: number,
@@ -51,6 +53,8 @@ function AutoMLTrainingBlock() {
             return (<ReviewSettings appState={appState} setAppState={setAppState} />);
         case 4:
             return (<PreProcessingView appState={appState} setAppState={setAppState} />);
+        case 5:
+            return (<TrainingView appState={appState} setAppState={setAppState} />);
         default:
             return (<NotFoundPage appState={appState} />);
     }
