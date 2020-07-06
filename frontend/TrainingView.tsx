@@ -120,7 +120,7 @@ export function TrainingView({ appState, setAppState }) {
             </Button>
             <Button
               variant='danger'
-              disabled={!modelName || modelName === "" || isLoading}
+              disabled={isLoading}
               icon='redo'
               onClick={startOver}>
               Start Over
