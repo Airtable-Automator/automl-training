@@ -14,21 +14,25 @@ async function createModel(automlClient: AutoMLClient, modelName: string, datase
     try {
       const response = await automlClient.createModel(projectId, datasetId, modelName, trainingBudget);
       operationId = _.last(response.name.split('/'));
+      console.log(operationId);
+      setTrainingOpId(operationId);
     } catch (e) {
       console.error(e);
       setErrorMessage(e.error.message);
-      return;
+      return false;
     }
-    console.log(operationId);
-    setTrainingOpId(operationId);
   } else {
     console.log("Found an existing Operation for Model Training, so using that to track progress: " + operationId);
   }
-  try {
-    await automlClient.waitForActiveOperationToComplete(projectId, operationId);
-  } catch (e) {
-    console.log(e);
-    setErrorMessage(e.error.message);
+  if ('' !== operationId) {
+    try {
+      await automlClient.waitForActiveOperationToComplete(projectId, operationId);
+      return true;
+    } catch (e) {
+      console.log(e);
+      setErrorMessage(e.error.message);
+      return false;
+    }
   }
 }
 
@@ -45,10 +49,12 @@ export function TrainingView({ appState, setAppState }) {
   (async () => {
     if (trainingOpId && trainingOpId !== '' && !isLoading) {
       setLoading(true);
-      await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
+      const hasPassed = await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
       setLoading(false);
       setTrainingOpId('');
-      completeModelTraining();
+      if (hasPassed) {
+        completeModelTraining();
+      }
     }
   })();
 
@@ -65,11 +71,13 @@ export function TrainingView({ appState, setAppState }) {
     e.preventDefault();
     setErrorMessage('');
     setLoading(true);
-    await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
+    const hasPassed = await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
     setLoading(false);
     setTrainingOpId('');
-    // Model Created, take the user to Thank you Page
-    completeModelTraining();
+    if (hasPassed) {
+      // Model Created, take the user to Thank you Page
+      completeModelTraining();
+    }
   }
 
   return (
