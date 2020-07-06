@@ -10,11 +10,11 @@ async function createModel(automlClient: AutoMLClient, modelName: string, datase
   let operationId = trainingOpId;
   if ('' === operationId || !operationId) {
     const datasetId = _.last(datasetMachineName.split('/'));
-    console.log(datasetId);
+    // console.log(datasetId);
     try {
       const response = await automlClient.createModel(projectId, datasetId, modelName, trainingBudget);
       operationId = _.last(response.name.split('/'));
-      console.log(operationId);
+      // console.log(operationId);
       setTrainingOpId(operationId);
     } catch (e) {
       console.error(e);
@@ -22,7 +22,7 @@ async function createModel(automlClient: AutoMLClient, modelName: string, datase
       return false;
     }
   } else {
-    console.log("Found an existing Operation for Model Training, so using that to track progress: " + operationId);
+    // console.log("Found an existing Operation for Model Training, so using that to track progress: " + operationId);
   }
   if ('' !== operationId) {
     try {
@@ -80,6 +80,11 @@ export function TrainingView({ appState, setAppState }) {
     }
   }
 
+  const startOver = () => {
+    window.localStorage.clear();
+    setAppState({ index: 1, state: {} });
+  }
+
   return (
     <Box display="flex" alignItems="center" justifyContent="center" border="default" flexDirection="column" width={viewport.size.width} height={viewport.size.height} padding={0} className='review-settings'>
       <form onSubmit={startTraining}>
@@ -104,7 +109,7 @@ export function TrainingView({ appState, setAppState }) {
             </FormField>
           </Box>
 
-          <Box>
+          <Box display='flex' justifyContent='space-evenly'>
             <Button
               variant='primary'
               disabled={!modelName || modelName === "" || isLoading}
@@ -112,6 +117,13 @@ export function TrainingView({ appState, setAppState }) {
               onClick={startTraining}>
               {!isLoading && "Build Model"}
               {isLoading && "Model Buliding in Progress"}
+            </Button>
+            <Button
+              variant='danger'
+              disabled={!modelName || modelName === "" || isLoading}
+              icon='redo'
+              onClick={startOver}>
+              Start Over
             </Button>
           </Box>
         </Box>

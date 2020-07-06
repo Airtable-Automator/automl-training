@@ -43,6 +43,11 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
   const [createDatasetIsLoading, setCreateDatasetIsLoading] = useState(false);
   const [dialogErrorMessage, setDialogErrorMessage] = useState('');
 
+  const startOver = () => {
+    window.localStorage.clear();
+    setAppState({ index: 1, state: {} });
+  }
+
   const crmClient = new CloudResourceManagerClient(settings, settings.settings.crmEndpoint);
   const loadProjects = async () => {
     const projects = await crmClient.listProjects();
@@ -138,7 +143,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
       return dataset.value === selectedDataset;
     });
     const updatedAppState = { ...appState };
-    console.log(updatedAppState);
+    // console.log(updatedAppState);
     updatedAppState.index = updatedAppState.index + 1;
     updatedAppState.state.automl = {
       project: selectedProject,
@@ -148,7 +153,7 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
       },
       bucket: selectedBucket,
     }
-    console.log(JSON.stringify(updatedAppState));
+    // console.log(JSON.stringify(updatedAppState));
     setAppState(updatedAppState);
   }
 
@@ -239,11 +244,17 @@ export function ConfigureOrSelectAutoMLProject({ appState, setAppState }) {
           </Box>
         }
 
-        {isValid &&
-          <Box flexDirection='row-reverse'>
+        <Box display='flex' justifyContent='space-evenly'>
+          {isValid &&
             <Button variant="primary" onClick={next}>Review Settings</Button>
-          </Box>}
-
+          }
+          <Button
+            variant='danger'
+            icon='redo'
+            onClick={startOver}>
+            Start Over
+            </Button>
+        </Box>
       </Box>
     </Box>
   );

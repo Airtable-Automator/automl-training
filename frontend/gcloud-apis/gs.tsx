@@ -55,7 +55,7 @@ export class GsClient extends BaseClient {
     const body = JSON.stringify({
       metadata: metadata,
     });
-    console.log("Body during _patch -- " + body);
+    // console.log("Body during _patch -- " + body);
 
     const response = await fetch(`${this.endpoint}${resource}`, {
       method: 'PATCH',

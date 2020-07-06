@@ -21,10 +21,10 @@ export function ChooseSource({ appState, setAppState }) {
   const isValid = table && imageField && labelField;
 
   const next = (e) => {
-    console.log(appState);
+    // console.log(appState);
     e.preventDefault();
     const updatedAppState = { ...appState };
-    console.log(updatedAppState);
+    // console.log(updatedAppState);
     updatedAppState.index = updatedAppState.index + 1;
     updatedAppState.state.source = {
       table: table.name,

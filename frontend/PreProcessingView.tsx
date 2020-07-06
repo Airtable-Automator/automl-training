@@ -25,7 +25,7 @@ async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineNa
 
   const checkAndUpload = async (record, index) => {
     const img = record.getCellValue(imageFieldName);
-    console.log(img);
+    // console.log(img);
     const label = record.getCellValue(labelFieldName);
 
     if (img && label) {
@@ -37,11 +37,11 @@ async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineNa
         const imageAsBlob = await responseFromAirtable.blob();
         const objectExists = await gsClient.objectExist(bucket, gsPath(datasetId, encodeURIComponent(i.id + "." + fileExt)));
         if (!objectExists) {
-          console.log("Object not found already on GCS, uploading it now")
+          // console.log("Object not found already on GCS, uploading it now");
           await gsClient.upload(bucket, gsPath(datasetId, encodeURIComponent(i.id + "." + fileExt)), i.type, imageAsBlob);
           await gsClient.patch(bucket, gsPath(datasetId, encodeURIComponent(i.id + "." + fileExt)), { label: label.name });
         } else {
-          console.log("Object already in bucket, skipping upload");
+          // console.log("Object already in bucket, skipping upload");
         }
       } catch (e) {
         console.log(e);
@@ -58,7 +58,7 @@ async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineNa
   });
   await queue.onEmpty();
 
-  console.log("Upload complete for all the records");
+  // console.log("Upload complete for all the records");
 
   query.unloadData();
 }
@@ -69,13 +69,13 @@ async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachin
   const query = await table.selectRecordsAsync();
 
   const objects = await gsClient.listObjects(bucket, `${gsPrefix}/${datasetId}`);
-  console.log(objects);
+  // console.log(objects);
   const labels = objects.items.filter(function (obj) {
     return obj.metadata && obj.metadata.label;
   }).map(function (obj) {
     return `gs://${bucket}/${obj.name},${obj.metadata.label}`
   }).join('\n')
-  console.log(labels);
+  // console.log(labels);
 
   const csvAsBlob = new Blob([labels], {
     type: 'text/csv'
@@ -97,8 +97,8 @@ async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: stri
 
     try {
       const response = await automlClient.importDataIntoDataset(project, datasetId, `gs://${bucket}/${gsPath(datasetId, LABELS_CSV)}`);
-      console.log("Op from importData response");
-      console.log(response);
+      // console.log("Op from importData response");
+      // console.log(response);
       operationId = _.last(response.name.split('/'));
     } catch (err) {
       // we get error which represents that an existing import is already running, we can ignore this and move on
@@ -156,7 +156,7 @@ export function PreProcessingView({ appState, setAppState }) {
       let updatedAppState = _.set(appState, "state.preproc.stage", 1);
       setAppState(updatedAppState);
       // start the training progress
-      console.log(STEP_UPLOAD_IMAGE);
+      // console.log(STEP_UPLOAD_IMAGE);
       setCurrentStep(STEP_UPLOAD_IMAGE);
       setProgress(0.0);
     }
@@ -182,7 +182,7 @@ export function PreProcessingView({ appState, setAppState }) {
           setProgress(0.01);
           // create a CSV and upload it to GCS
           createLabelsCSV(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
-            console.log("Created Labels on GCS. Next step, import the dataset into AutoML");
+            // console.log("Created Labels on GCS. Next step, import the dataset into AutoML");
             let updatedAppState = _.set(appState, "state.preproc.stage", 3);
             setAppState(updatedAppState);
             setCompletedSteps(_.concat(completedSteps, { name: CREATE_LABELS_CSV, status: true }));
@@ -198,7 +198,7 @@ export function PreProcessingView({ appState, setAppState }) {
           setCurrentStep(IMPORT_IMAGES_INTO_DATASET);
           setProgress(0.01);
           importDatasetIntoAutoML(automlClient, appState.state.automl.project, appState.state.automl.dataset.id, appState.state.automl.bucket, sourceTable, setProgress, preProcOpId, setPreProcOpId, setErrorMessage).then(function (res) {
-            console.log("Imported Dataset into AutoML. Next step, Start training the model on AutoML");
+            // console.log("Imported Dataset into AutoML. Next step, Start training the model on AutoML");
             let updatedAppState = _.set(appState, "state.preproc.stage", 4);
             setAppState(updatedAppState);
 

@@ -86,13 +86,13 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
 
     try {
       const _ = await gtoken.getToken();
-      console.log(_);
+      // console.log(_);
       // validation success
       setLoading(false);
 
       const updatedAppState = { ...appState };
-      console.log(updatedAppState);
-      console.log(JSON.stringify(updatedAppState));
+      // console.log(updatedAppState);
+      // console.log(JSON.stringify(updatedAppState));
       updatedAppState.index = 1;
       setAppState(updatedAppState);
 
@@ -105,8 +105,8 @@ export function Welcome({ appState, setAppState, setIsSettingsVisible }) {
   }
 
   return (
-    <Box display="flex" alignItems="center" justifyContent="center" border="default" flexDirection="column" width={viewport.size.width} height={viewport.size.height} padding={0}>
-      <Box maxWidth='650px'>
+    <Box display="flex" alignItems="center" justifyContent="center" border="default" flexDirection="column" padding={0}>
+      <Box maxWidth='580px'>
         <Box paddingBottom='10px'>
           <Heading size="xlarge">Welcome to AutoML Model Training Block</Heading>
         </Box>

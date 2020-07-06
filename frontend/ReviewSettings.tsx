@@ -34,7 +34,6 @@ export function ReviewSettings({ appState, setAppState }) {
 
     .center {
       display: flex;
-      justify-content: center;
       align-items: center;
     }
   `);
@@ -62,6 +61,11 @@ export function ReviewSettings({ appState, setAppState }) {
     const updatedAppState = { ...appState };
     updatedAppState.index = 4;
     setAppState(updatedAppState);
+  }
+
+  const startOver = () => {
+    window.localStorage.clear();
+    setAppState({ index: 1, state: {} });
   }
 
   return (
@@ -118,11 +122,17 @@ export function ReviewSettings({ appState, setAppState }) {
 
           </Box>
 
-          <Box className='center' paddingTop='20px'>
+          <Box className='center' paddingTop='20px' justifyContent='space-evenly'>
             <Button variant='primary' width='180px' onClick={startPreprocessing}>
               <Box className='center'>
                 <Icon name='play' size={16} /> &nbsp; Start Pre-processing
               </Box>
+            </Button>
+            <Button
+              variant='danger'
+              icon='redo'
+              onClick={startOver}>
+              Start Over
             </Button>
           </Box>
         </Box>
