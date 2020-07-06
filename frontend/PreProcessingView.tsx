@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import _ from 'lodash';
-import { Box, Heading, useViewport, ProgressBar, Text, useBase, useRecords, Icon, Button } from '@airtable/blocks/ui';
+import _, { update } from 'lodash';
+import { Box, Heading, useViewport, ProgressBar, Text, useBase, useRecords, Icon, Button, Tooltip } from '@airtable/blocks/ui';
 import { Table } from '@airtable/blocks/models';
 import PQueue from 'p-queue';
 import { useSettings } from './settings';
@@ -9,91 +9,105 @@ import { AutoMLClient } from './gcloud-apis/aml';
 import { useLocalStorage } from './use_local_storage';
 
 const queue = new PQueue({ concurrency: 1 });
+const gsPath = (datasetId, name) => {
+  return `automl-training9/${datasetId}/${name}`
+}
 
-async function uploadImages(gsClient: GsClient, bucket: string, table: Table, imageFieldName: string, setProgress) {
+async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineName: string, table: Table, imageFieldName: string, labelFieldName: string, setProgress) {
+  const datasetId = _.last(datasetMachineName.split('/'));
+
   const query = await table.selectRecordsAsync();
   const total = query.records.length;
 
   const checkAndUpload = async (record, index) => {
     const img = record.getCellValue(imageFieldName);
     console.log(img);
+    const label = record.getCellValue(labelFieldName);
 
     if (img) {
       // value exist in the cell
       const i = img[0]; // we by default pick only the first image
+      const fileExt = _.last(i.type.split('/'));
       const responseFromAirtable = await fetch(i.url);
-      // console.log("fetched the image from airtable");
-      const imageAsBlob = await responseFromAirtable.blob();
-      // console.log("Attempting to upload file to " + bucket);
-      // console.log(imageAsBlob.size);
-      // console.log(i);
-      const objectExists = await gsClient.objectExist(bucket, `automl-training/${table.name}/${encodeURIComponent(i.filename)}`);
-      if (!objectExists) {
-        console.log("Object not found already on GCS, uploading it now")
-        await gsClient.upload(bucket, `automl-training/${table.name}/${encodeURIComponent(i.filename)}`, i.type, imageAsBlob);
-      } else {
-        console.log("Object already in bucket, skipping upload");
+      try {
+        const imageAsBlob = await responseFromAirtable.blob();
+        const objectExists = await gsClient.objectExist(bucket, gsPath(datasetId, encodeURIComponent(i.id + "." + fileExt)));
+        if (!objectExists) {
+          console.log("Object not found already on GCS, uploading it now")
+          await gsClient.upload(bucket, gsPath(datasetId, encodeURIComponent(i.id + "." + fileExt)), i.type, imageAsBlob);
+          await gsClient.patch(bucket, gsPath(datasetId, encodeURIComponent(i.id + "." + fileExt)), { label: label.name });
+        } else {
+          console.log("Object already in bucket, skipping upload");
+        }
+      } catch (e) {
+        console.log(e);
       }
 
       const progressSoFar = (index + 1) / total;
       setProgress(progressSoFar);
     }
-
-    console.log("Upload complete for all the records");
   }
 
-  const promises = query.records.map(async function (record, index) {
+  query.records.forEach(async function (record, index) {
     await queue.add(() => checkAndUpload(record, index));
   });
+  await queue.onEmpty();
 
-  await Promise.all(promises);
+  console.log("Upload complete for all the records");
+
   query.unloadData();
 }
 
-async function createLabelsCSV(gsClient: GsClient, bucket: string, table: Table, imageFieldName: string, labelFieldName: string, setProgress) {
+async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachineName: string, table: Table, imageFieldName: string, labelFieldName: string, setProgress) {
+  const datasetId = _.last(datasetMachineName.split('/'));
+
   const query = await table.selectRecordsAsync();
-  const total = query.records.length;
 
-  const labels = query.records.map(function (record, index) {
-    const img = record.getCellValue(imageFieldName);
-    console.log(img);
-
-    const label = record.getCellValue(labelFieldName);
-    console.log(label);
-
-    if (img) {
-      const i = img[0];
-      return `gs://${bucket}/automl-training/${table.name}/${encodeURIComponent(i.filename)},${label.name}`
-    }
-  }).join('\n');
+  const objects = await gsClient.listObjects(bucket, 'automl-training7');
+  console.log(objects);
+  const labels = objects.items.map(function (obj) {
+    return `gs://${bucket}/${obj.name},${obj.metadata.label}`
+  }).join('\n')
   console.log(labels);
+
   const csvAsBlob = new Blob([labels], {
     type: 'text/csv'
   });
 
-  // TODO: May be we need to check if the file exists already?
-  const labelsAlreadyUploaded = await gsClient.objectExist(bucket, `automl-training/${table.name}/labels2.csv`)
+  const labelsAlreadyUploaded = await gsClient.objectExist(bucket, gsPath(datasetId, 'label.csv'));
   if (!labelsAlreadyUploaded) {
-    await gsClient.upload(bucket, `automl-training/${table.name}/labels2.csv`, 'text/csv', csvAsBlob);
+    await gsClient.upload(bucket, gsPath(datasetId, 'label.csv'), 'text/csv', csvAsBlob);
   }
   setProgress(1.0);
 
   query.unloadData();
 }
 
-async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: string, datasetMachineName: string, bucket: string, table: Table, setProgress) {
-  const datasetId = _.last(datasetMachineName.split('/'));
+async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: string, datasetMachineName: string, bucket: string, table: Table, setProgress, preProcOpId: string, setPreProcOpdId, setErrorMessage) {
+  let operationId = preProcOpId;
+  if ('' === operationId || !operationId) {
+    const datasetId = _.last(datasetMachineName.split('/'));
 
-  try {
-    const operation = await automlClient.importDataIntoDataset(project, datasetId, `gs://${bucket}/automl-training/${table.name}/labels2.csv`);
-    console.log("Op from importData response");
-    console.log(operation);
-  } catch (err) {
-    // we get error which represents that an existing import is already running, we can ignore this and move on
+    try {
+      const response = await automlClient.importDataIntoDataset(project, datasetId, `gs://${bucket}/${gsPath(datasetId, 'label.csv')}`);
+      console.log("Op from importData response");
+      console.log(response);
+      operationId = _.last(response.name.split('/'));
+    } catch (err) {
+      // we get error which represents that an existing import is already running, we can ignore this and move on
+    }
   }
   setProgress(0.66);
-  await automlClient.waitForAllActiveOperationsToComplete(project);
-  setProgress(1.0);
+  const response = await automlClient.waitForActiveOperationToComplete(project, operationId);
+  if (response.error) {
+    const partialFailures = response.metadata.partialFailures.map(function (err) {
+      return err.message;
+    }).join('\n');
+    setErrorMessage(response.error.message + '\n' + partialFailures);
+    //  throw new Error(response.error.message + '\n' + partialFailures);
+  } else {
+    setProgress(1.0);
+  }
 }
 
 const STEP_UPLOAD_IMAGE = 'Uploading Images to Cloud Storage';
@@ -107,6 +121,8 @@ export function PreProcessingView({ appState, setAppState }) {
   const [completedSteps, setCompletedSteps] = useLocalStorage('preProcessing.completedSteps', []);
   const [currentStep, setCurrentStep] = useLocalStorage('preProcessing.currentStep', 'Initializing' as string);
   const [progress, setProgress] = useLocalStorage('preProcessing.progress', 0.0 as number);
+  const [preProcOpId, setPreProcOpId] = useLocalStorage('preProcessing.opId', '');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const sourceTable = base.getTableByNameIfExists(appState.state.source.table);
   const gsClient = new GsClient(settings, settings.settings.gsEndpoint);
@@ -116,6 +132,15 @@ export function PreProcessingView({ appState, setAppState }) {
     const updatedAppState = { ...appState };
     updatedAppState.index = 5;
     setAppState(updatedAppState);
+  }
+
+  const restartPreProcessing = () => {
+    const updatedAppState = { ...appState };
+    delete updatedAppState.state['training'];
+    setAppState(updatedAppState);
+    setCompletedSteps([]);
+    setProgress(0.0);
+    setCurrentStep('Restarting');
   }
 
   useEffect(() => {
@@ -134,7 +159,7 @@ export function PreProcessingView({ appState, setAppState }) {
         case 1:
           // we need to start uploading
           setProgress(0.01);
-          uploadImages(gsClient, appState.state.automl.bucket, sourceTable, appState.state.source.imageField, setProgress).then(function (res) {
+          uploadImages(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
             let updatedAppState = _.set(appState, "state.training.stage", 2);
             setAppState(updatedAppState);
             setCompletedSteps(_.concat(completedSteps, { name: STEP_UPLOAD_IMAGE, status: true }));
@@ -149,7 +174,7 @@ export function PreProcessingView({ appState, setAppState }) {
           setCurrentStep(CREATE_LABELS_CSV);
           setProgress(0.01);
           // create a CSV and upload it to GCS
-          createLabelsCSV(gsClient, appState.state.automl.bucket, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
+          createLabelsCSV(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
             console.log("Created Labels on GCS. Next step, import the dataset into AutoML");
             let updatedAppState = _.set(appState, "state.training.stage", 3);
             setAppState(updatedAppState);
@@ -165,14 +190,14 @@ export function PreProcessingView({ appState, setAppState }) {
         case 3:
           setCurrentStep(IMPORT_IMAGES_INTO_DATASET);
           setProgress(0.01);
-          importDatasetIntoAutoML(automlClient, appState.state.automl.project, appState.state.automl.dataset.id, appState.state.automl.bucket, sourceTable, setProgress).then(function (res) {
+          importDatasetIntoAutoML(automlClient, appState.state.automl.project, appState.state.automl.dataset.id, appState.state.automl.bucket, sourceTable, setProgress, preProcOpId, setPreProcOpId, setErrorMessage).then(function (res) {
             console.log("Imported Dataset into AutoML. Next step, Start training the model on AutoML");
             let updatedAppState = _.set(appState, "state.training.stage", 4);
             setAppState(updatedAppState);
 
             setCompletedSteps(_.concat(completedSteps, { name: IMPORT_IMAGES_INTO_DATASET, status: true }));
           }).catch(function (err) {
-            setCompletedSteps(_.concat(completedSteps, { name: IMPORT_IMAGES_INTO_DATASET, status: false }));
+            setCompletedSteps(_.concat(completedSteps, { name: IMPORT_IMAGES_INTO_DATASET, status: false, error: err.message }));
             console.error(err);
           });
           return;
@@ -201,9 +226,17 @@ export function PreProcessingView({ appState, setAppState }) {
           <Box>
             {
               completedSteps.map(function (value, index) {
+                const iconOnSuccess = <Icon name='check' fillColor='green' />
+                const iconOnError = <Tooltip
+                  content={errorMessage}
+                  placementX={Tooltip.placements.CENTER}
+                  placementY={Tooltip.placements.BOTTOM}>
+                  <Icon name='x' fillColor='red'></Icon>
+                </Tooltip>
+
                 return (
                   <Box display='flex' key={index}>
-                    <Text textColor='#909090'>{index + 1}. {value.name} <Icon name={value.status ? 'check' : 'x'} fillColor={value.status ? 'green' : 'red'} /></Text>
+                    <Text textColor='#909090'>{index + 1}. {value.name} {value.status && iconOnSuccess} {!value.status && iconOnError}</Text>
                   </Box>
                 );
               })
@@ -214,7 +247,7 @@ export function PreProcessingView({ appState, setAppState }) {
             tail && !tail.status &&
             <Box padding='20px'>
               <Box><em>{tail.name}</em> has failed, please restart Pre-processing</Box>
-              <Button variant='primary'>Restart Pre-processing</Button>
+              <Button variant='primary' onClick={restartPreProcessing}>Restart Pre-processing</Button>
             </Box>
           }
 
