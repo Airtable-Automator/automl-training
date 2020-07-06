@@ -49,10 +49,10 @@ export function TrainingView({ appState, setAppState }) {
   (async () => {
     if (trainingOpId && trainingOpId !== '' && !isLoading) {
       setLoading(true);
-      const hasPassed = await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
+      const isSuccessful = await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
       setLoading(false);
       setTrainingOpId('');
-      if (hasPassed) {
+      if (isSuccessful) {
         completeModelTraining();
       }
     }
@@ -71,10 +71,10 @@ export function TrainingView({ appState, setAppState }) {
     e.preventDefault();
     setErrorMessage('');
     setLoading(true);
-    const hasPassed = await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
+    const isSuccessful = await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
     setLoading(false);
     setTrainingOpId('');
-    if (hasPassed) {
+    if (isSuccessful) {
       // Model Created, take the user to Thank you Page
       completeModelTraining();
     }
