@@ -49,7 +49,7 @@ async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineNa
 
       const progressSoFar = (index + 1) / total;
       setProgress(progressSoFar);
-      setCurrentStep(STEP_UPLOAD_IMAGE + " - " + (index + 1) + " of " + total);
+      setCurrentStep("1 / 3 - " + STEP_UPLOAD_IMAGE + " - " + (index + 1) + " of " + total);
     }
   }
 
@@ -63,31 +63,36 @@ async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineNa
   query.unloadData();
 }
 
-async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachineName: string, table: Table, imageFieldName: string, labelFieldName: string, setProgress) {
-  const datasetId = _.last(datasetMachineName.split('/'));
+async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachineName: string, table: Table, setProgress, setErrorMessage) {
+  try {
+    const datasetId = _.last(datasetMachineName.split('/'));
 
-  const query = await table.selectRecordsAsync();
+    const query = await table.selectRecordsAsync();
 
-  const objects = await gsClient.listObjects(bucket, `${gsPrefix}/${datasetId}`);
-  // console.log(objects);
-  const labels = objects.items.filter(function (obj) {
-    return obj.metadata && obj.metadata.label;
-  }).map(function (obj) {
-    return `gs://${bucket}/${obj.name},${obj.metadata.label}`
-  }).join('\n')
-  // console.log(labels);
+    const objects = await gsClient.listObjects(bucket, `${gsPrefix}/${datasetId}`);
+    // console.log(objects);
+    const labels = objects.items.filter(function (obj) {
+      return obj.metadata && obj.metadata.label;
+    }).map(function (obj) {
+      return `gs://${bucket}/${obj.name},${obj.metadata.label}`
+    }).join('\n')
+    // console.log(labels);
 
-  const csvAsBlob = new Blob([labels], {
-    type: 'text/csv'
-  });
+    const csvAsBlob = new Blob([labels], {
+      type: 'text/csv'
+    });
 
-  const labelsAlreadyUploaded = await gsClient.objectExist(bucket, gsPath(datasetId, LABELS_CSV));
-  if (!labelsAlreadyUploaded) {
-    await gsClient.upload(bucket, gsPath(datasetId, LABELS_CSV), 'text/csv', csvAsBlob);
+    const labelsAlreadyUploaded = await gsClient.objectExist(bucket, gsPath(datasetId, LABELS_CSV));
+    if (!labelsAlreadyUploaded) {
+      await gsClient.upload(bucket, gsPath(datasetId, LABELS_CSV), 'text/csv', csvAsBlob);
+    }
+    setProgress(1.0);
+
+    query.unloadData();
+  } catch (e) {
+    console.log(e);
+    setErrorMessage(e.message);
   }
-  setProgress(1.0);
-
-  query.unloadData();
 }
 
 async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: string, datasetMachineName: string, bucket: string, table: Table, setProgress, preProcOpId: string, setPreProcOpdId, setErrorMessage) {
@@ -174,6 +179,7 @@ export function PreProcessingView({ appState, setAppState }) {
           }).catch(function (err) {
             console.error(err);
             setCompletedSteps(_.concat(completedSteps, { name: STEP_UPLOAD_IMAGE, status: false }));
+            setErrorMessage(err.message);
           });
           return;
 
@@ -181,7 +187,7 @@ export function PreProcessingView({ appState, setAppState }) {
           setCurrentStep("2 / 3 - " + CREATE_LABELS_CSV);
           setProgress(0.01);
           // create a CSV and upload it to GCS
-          createLabelsCSV(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
+          createLabelsCSV(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, setProgress, setErrorMessage).then(function (res) {
             // console.log("Created Labels on GCS. Next step, import the dataset into AutoML");
             let updatedAppState = _.set(appState, "state.preproc.stage", 3);
             setAppState(updatedAppState);
@@ -190,6 +196,7 @@ export function PreProcessingView({ appState, setAppState }) {
             setProgress(0.0);
           }).catch(function (err) {
             console.error(err);
+            setErrorMessage(err.message);
             setCompletedSteps(_.concat(completedSteps, { name: CREATE_LABELS_CSV, status: false }));
           });
           return;
@@ -206,6 +213,7 @@ export function PreProcessingView({ appState, setAppState }) {
           }).catch(function (err) {
             setCompletedSteps(_.concat(completedSteps, { name: IMPORT_IMAGES_INTO_DATASET, status: false, error: err.message }));
             console.error(err);
+            setErrorMessage(err.message);
           });
           return;
       }
