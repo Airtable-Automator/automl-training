@@ -38,7 +38,7 @@ function AutoMLTrainingBlock() {
         }
     }, [isValid]);
 
-    const [appState, setAppState] = useState<AppState>({ index: 1, state: {} });
+    const [appState, setAppState] = useLocalStorage<AppState>('appState', { index: 1, state: {} });
 
     if (!isValid || isSettingsVisible) {
         return (<Welcome appState={appState} setAppState={setAppState} setIsSettingsVisible={setIsSettingsVisible} />);

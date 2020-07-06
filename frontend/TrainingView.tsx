@@ -31,10 +31,17 @@ export function TrainingView({ appState, setAppState }) {
   const settings = useSettings();
   const [modelName, setModelName] = useState('');
   const [trainingBudget, setTrainingBudget] = useState(1);
-  const [isLoading, setLoading] = useLocalStorage('training.inprogress', false as boolean);
+  const [isLoading, setLoading] = useState(false);
   const [trainingOpId, setTrainingOpId] = useLocalStorage('training.opId', '');
   const [errorMessage, setErrorMessage] = useState('');
   const automlClient = new AutoMLClient(settings, settings.settings.automlEndpoint);
+  (async () => {
+    if (trainingOpId && trainingOpId !== '' && !isLoading) {
+      setLoading(true);
+      await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
+      setLoading(false);
+    }
+  })();
 
   const startTraining = async (e) => {
     e.preventDefault();
