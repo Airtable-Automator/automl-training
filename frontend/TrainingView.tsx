@@ -42,6 +42,7 @@ export function TrainingView({ appState, setAppState }) {
       await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
       setLoading(false);
       setTrainingOpId('');
+      completeModelTraining();
     }
   })();
 
@@ -58,7 +59,9 @@ export function TrainingView({ appState, setAppState }) {
     setLoading(true);
     await createModel(automlClient, modelName, appState.state.automl.dataset.id, appState.state.automl.project, trainingBudget, trainingOpId, setTrainingOpId, setErrorMessage);
     setLoading(false);
+    setTrainingOpId('');
     // Model Created, take the user to Thank you Page
+    completeModelTraining();
   }
 
   return (
