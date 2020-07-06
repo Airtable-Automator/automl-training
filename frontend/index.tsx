@@ -17,13 +17,6 @@ import { useLocalStorage } from './use_local_storage';
 import { TrainingView } from './TrainingView';
 import { ThankYou } from './ThankYou';
 
-// Determines the minimum size the block needs before it asks the user to enlarge the block.
-viewport.addMinSize({
-    height: 400,
-    width: 650,
-});
-
-
 type AppState = {
     index: number,
     state: object,
