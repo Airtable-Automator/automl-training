@@ -117,9 +117,9 @@ async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: stri
   }
 }
 
-const STEP_UPLOAD_IMAGE = '1 / 3 - Uploading Images to Cloud Storage';
-const CREATE_LABELS_CSV = '2 / 3 - Creating and uploading labels.csv for the Dataset';
-const IMPORT_IMAGES_INTO_DATASET = '3 / 3 - Importing Data into Dataset';
+const STEP_UPLOAD_IMAGE = 'Uploading Images to Cloud Storage';
+const CREATE_LABELS_CSV = 'Creating and uploading labels.csv for the Dataset';
+const IMPORT_IMAGES_INTO_DATASET = 'Importing Data into Dataset';
 
 export function PreProcessingView({ appState, setAppState }) {
   const settings = useSettings();
@@ -129,7 +129,7 @@ export function PreProcessingView({ appState, setAppState }) {
   const [currentStep, setCurrentStep] = useLocalStorage('preProcessing.currentStep', 'Initializing' as string);
   const [progress, setProgress] = useLocalStorage('preProcessing.progress', 0.0 as number);
   const [preProcOpId, setPreProcOpId] = useLocalStorage('preProcessing.opId', '');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useLocalStorage('preProcessing.errorMessage', '');
 
   const sourceTable = base.getTableByNameIfExists(appState.state.source.table);
   const gsClient = new GsClient(settings, settings.settings.gsEndpoint);
@@ -157,7 +157,7 @@ export function PreProcessingView({ appState, setAppState }) {
       setAppState(updatedAppState);
       // start the training progress
       // console.log(STEP_UPLOAD_IMAGE);
-      setCurrentStep(STEP_UPLOAD_IMAGE);
+      setCurrentStep("1 / 3 - " + STEP_UPLOAD_IMAGE);
       setProgress(0.0);
     }
 
@@ -178,7 +178,7 @@ export function PreProcessingView({ appState, setAppState }) {
           return;
 
         case 2:
-          setCurrentStep(CREATE_LABELS_CSV);
+          setCurrentStep("2 / 3 - " + CREATE_LABELS_CSV);
           setProgress(0.01);
           // create a CSV and upload it to GCS
           createLabelsCSV(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
@@ -195,7 +195,7 @@ export function PreProcessingView({ appState, setAppState }) {
           return;
 
         case 3:
-          setCurrentStep(IMPORT_IMAGES_INTO_DATASET);
+          setCurrentStep("3 / 3 - " + IMPORT_IMAGES_INTO_DATASET);
           setProgress(0.01);
           importDatasetIntoAutoML(automlClient, appState.state.automl.project, appState.state.automl.dataset.id, appState.state.automl.bucket, sourceTable, setProgress, preProcOpId, setPreProcOpId, setErrorMessage).then(function (res) {
             // console.log("Imported Dataset into AutoML. Next step, Start training the model on AutoML");
@@ -234,12 +234,7 @@ export function PreProcessingView({ appState, setAppState }) {
             {
               completedSteps.map(function (value, index) {
                 const iconOnSuccess = <Icon name='check' fillColor='green' />
-                const iconOnError = <Tooltip
-                  content={errorMessage}
-                  placementX={Tooltip.placements.CENTER}
-                  placementY={Tooltip.placements.BOTTOM}>
-                  <Icon name='x' fillColor='red'></Icon>
-                </Tooltip>
+                const iconOnError = <Icon name='x' fillColor='red'></Icon>
 
                 return (
                   <Box display='flex' key={index}>
@@ -254,6 +249,9 @@ export function PreProcessingView({ appState, setAppState }) {
             tail && !tail.status &&
             <Box padding='20px'>
               <Box><em>{tail.name}</em> has failed, please restart Pre-processing</Box>
+              <Box>
+                <Text textColor='red'><Icon name='warning' fillColor='red' />{errorMessage}</Text>
+              </Box>
               <Button variant='primary' onClick={restartPreProcessing}>Restart Pre-processing</Button>
             </Box>
           }
