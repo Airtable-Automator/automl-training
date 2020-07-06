@@ -10,12 +10,14 @@ import { useLocalStorage } from './use_local_storage';
 
 const queue = new PQueue({ concurrency: 1 });
 
-const gsPrefix = 'automl-training10'; // TODO: Make be take this as a config from the user during the model building process
+const LABELS_CSV = 'labels.csv';
+
+const gsPrefix = 'training/';
 const gsPath = (datasetId, name) => {
   return `${gsPrefix}/${datasetId}/${name}`
 }
 
-async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineName: string, table: Table, imageFieldName: string, labelFieldName: string, setProgress) {
+async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineName: string, table: Table, imageFieldName: string, labelFieldName: string, setProgress, setCurrentStep) {
   const datasetId = _.last(datasetMachineName.split('/'));
 
   const query = await table.selectRecordsAsync();
@@ -47,6 +49,7 @@ async function uploadImages(gsClient: GsClient, bucket: string, datasetMachineNa
 
       const progressSoFar = (index + 1) / total;
       setProgress(progressSoFar);
+      setCurrentStep(STEP_UPLOAD_IMAGE + " - " + (index + 1) + " of " + total);
     }
   }
 
@@ -65,7 +68,7 @@ async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachin
 
   const query = await table.selectRecordsAsync();
 
-  const objects = await gsClient.listObjects(bucket, gsPrefix);
+  const objects = await gsClient.listObjects(bucket, `${gsPrefix}/${datasetId}`);
   console.log(objects);
   const labels = objects.items.filter(function (obj) {
     return obj.metadata && obj.metadata.label;
@@ -78,9 +81,9 @@ async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachin
     type: 'text/csv'
   });
 
-  const labelsAlreadyUploaded = await gsClient.objectExist(bucket, gsPath(datasetId, 'label.csv'));
+  const labelsAlreadyUploaded = await gsClient.objectExist(bucket, gsPath(datasetId, LABELS_CSV));
   if (!labelsAlreadyUploaded) {
-    await gsClient.upload(bucket, gsPath(datasetId, 'label.csv'), 'text/csv', csvAsBlob);
+    await gsClient.upload(bucket, gsPath(datasetId, LABELS_CSV), 'text/csv', csvAsBlob);
   }
   setProgress(1.0);
 
@@ -93,7 +96,7 @@ async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: stri
     const datasetId = _.last(datasetMachineName.split('/'));
 
     try {
-      const response = await automlClient.importDataIntoDataset(project, datasetId, `gs://${bucket}/${gsPath(datasetId, 'label.csv')}`);
+      const response = await automlClient.importDataIntoDataset(project, datasetId, `gs://${bucket}/${gsPath(datasetId, LABELS_CSV)}`);
       console.log("Op from importData response");
       console.log(response);
       operationId = _.last(response.name.split('/'));
@@ -114,9 +117,9 @@ async function importDatasetIntoAutoML(automlClient: AutoMLClient, project: stri
   }
 }
 
-const STEP_UPLOAD_IMAGE = 'Uploading Images to Cloud Storage';
-const CREATE_LABELS_CSV = 'Creating and uploading labels.csv for the Dataset';
-const IMPORT_IMAGES_INTO_DATASET = 'Importing Data into Dataset';
+const STEP_UPLOAD_IMAGE = '1 / 3 - Uploading Images to Cloud Storage';
+const CREATE_LABELS_CSV = '2 / 3 - Creating and uploading labels.csv for the Dataset';
+const IMPORT_IMAGES_INTO_DATASET = '3 / 3 - Importing Data into Dataset';
 
 export function PreProcessingView({ appState, setAppState }) {
   const settings = useSettings();
@@ -163,7 +166,7 @@ export function PreProcessingView({ appState, setAppState }) {
         case 1:
           // we need to start uploading
           setProgress(0.01);
-          uploadImages(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress).then(function (res) {
+          uploadImages(gsClient, appState.state.automl.bucket, appState.state.automl.dataset.id, sourceTable, appState.state.source.imageField, appState.state.source.labelField, setProgress, setCurrentStep).then(function (res) {
             let updatedAppState = _.set(appState, "state.preproc.stage", 2);
             setAppState(updatedAppState);
             setCompletedSteps(_.concat(completedSteps, { name: STEP_UPLOAD_IMAGE, status: true }));
