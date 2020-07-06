@@ -88,7 +88,7 @@ export function TrainingView({ appState, setAppState }) {
   return (
     <Box display="flex" alignItems="center" justifyContent="center" border="default" flexDirection="column" width={viewport.size.width} height={viewport.size.height} padding={0} className='review-settings'>
       <form onSubmit={startTraining}>
-        <Box width='580px'>
+        <Box width='500px'>
           <Box paddingBottom='10px' display='flex' alignItems='center' justifyContent='center'>
             <Heading size='xlarge'>Train a new Model</Heading>
           </Box>
