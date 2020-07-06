@@ -6,6 +6,7 @@ import { useSettings } from './settings';
 import { AutoMLClient } from './gcloud-apis/aml';
 
 async function createModel(automlClient: AutoMLClient, modelName: string, datasetMachineName: string, projectId: string, trainingBudget: number, trainingOpId: string, setTrainingOpId, setErrorMessage) {
+  setErrorMessage('');
   let operationId = trainingOpId;
   if ('' === operationId || !operationId) {
     const datasetId = _.last(datasetMachineName.split('/'));
