@@ -10,7 +10,7 @@ import { useLocalStorage } from './use_local_storage';
 
 const queue = new PQueue({ concurrency: 1 });
 
-const gsPrefix = 'automl-training9'; // TODO: Make be take this as a config from the user during the model building process
+const gsPrefix = 'automl-training10'; // TODO: Make be take this as a config from the user during the model building process
 const gsPath = (datasetId, name) => {
   return `${gsPrefix}/${datasetId}/${name}`
 }
@@ -67,7 +67,9 @@ async function createLabelsCSV(gsClient: GsClient, bucket: string, datasetMachin
 
   const objects = await gsClient.listObjects(bucket, gsPrefix);
   console.log(objects);
-  const labels = objects.items.map(function (obj) {
+  const labels = objects.items.filter(function (obj) {
+    return obj.metadata && obj.metadata.label;
+  }).map(function (obj) {
     return `gs://${bucket}/${obj.name},${obj.metadata.label}`
   }).join('\n')
   console.log(labels);
