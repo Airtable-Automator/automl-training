@@ -29,12 +29,13 @@ async function createModel(automlClient: AutoMLClient, modelName: string, datase
 export function TrainingView({ appState, setAppState }) {
   const viewport = useViewport();
   const settings = useSettings();
-  const [modelName, setModelName] = useState('');
-  const [trainingBudget, setTrainingBudget] = useState(1);
+  const [modelName, setModelName] = useLocalStorage('training.modelName', '' as string);
+  const [trainingBudget, setTrainingBudget] = useLocalStorage('training.budget', 8 as number);
   const [isLoading, setLoading] = useState(false);
   const [trainingOpId, setTrainingOpId] = useLocalStorage('training.opId', '');
   const [errorMessage, setErrorMessage] = useState('');
   const automlClient = new AutoMLClient(settings, settings.settings.automlEndpoint);
+  // start tracking for progress if we already have a trackingId
   (async () => {
     if (trainingOpId && trainingOpId !== '' && !isLoading) {
       setLoading(true);
@@ -82,8 +83,8 @@ export function TrainingView({ appState, setAppState }) {
               disabled={!modelName || modelName === "" || isLoading}
               icon={isLoading ? <Loader /> : undefined}
               onClick={startTraining}>
-              {!isLoading && "Start Training"}
-              {isLoading && "Training in Progress"}
+              {!isLoading && "Build Model"}
+              {isLoading && "Model Buliding in Progress"}
             </Button>
           </Box>
         </Box>
