@@ -49,8 +49,8 @@ export function TrainingView({ appState, setAppState }) {
   const completeModelTraining = () => {
     const updatedAppState = { ...appState };
     updatedAppState.index = 6;
-    updatedAppState.state.train.modelName = modelName;
-    setAppState(updatedAppState);
+    const withModelName = _.set(updatedAppState, "state.train.modelName", modelName);
+    setAppState(withModelName);
   }
 
   const startTraining = async (e) => {

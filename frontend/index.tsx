@@ -5,7 +5,7 @@ import {
     useSettingsButton,
     Box,
 } from '@airtable/blocks/ui';
-import {viewport} from '@airtable/blocks';
+import { viewport } from '@airtable/blocks';
 import React, { useState, useEffect } from 'react';
 import { Welcome } from './Welcome';
 import { useSettings } from './settings';
@@ -15,6 +15,7 @@ import { ReviewSettings } from './ReviewSettings';
 import { PreProcessingView } from './PreProcessingView';
 import { useLocalStorage } from './use_local_storage';
 import { TrainingView } from './TrainingView';
+import { ThankYou } from './ThankYou';
 
 // Determines the minimum size the block needs before it asks the user to enlarge the block.
 viewport.addMinSize({
@@ -63,6 +64,8 @@ function AutoMLTrainingBlock() {
             return (<PreProcessingView appState={appState} setAppState={setAppState} />);
         case 5:
             return (<TrainingView appState={appState} setAppState={setAppState} />);
+        case 6:
+            return (<ThankYou appState={appState} setAppState={setAppState} />);
         default:
             return (<NotFoundPage appState={appState} />);
     }
